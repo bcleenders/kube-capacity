@@ -87,6 +87,11 @@ func init() {
 		"hide-limits", "", false, "hide limits from output")
 	rootCmd.PersistentFlags().BoolVarP(&opts.ShowLabels,
 		"show-labels", "", false, "includes node labels in output")
+	rootCmd.PersistentFlags().BoolVarP(&opts.ShowAccelerator,
+		"accelerator", "", false, "includes accelerator (e.g., GPU) requests and limits in output")
+	rootCmd.PersistentFlags().StringVarP(&opts.AcceleratorResourceName,
+		"accelerator-resource-name", "", "nvidia.com/gpu",
+		"resource name for accelerator metrics (e.g., nvidia.com/gpu, amd.com/gpu, google.com/tpu)")
 }
 
 // Execute is the primary entrypoint for this CLI

@@ -43,6 +43,8 @@ type tableLine struct {
 	memoryRequests string
 	memoryLimits   string
 	memoryUtil     string
+	accelRequests  string
+	accelLimits    string
 	podCount       string
 	labels         string
 }
@@ -58,6 +60,8 @@ var headerStrings = tableLine{
 	memoryRequests: "MEMORY REQUESTS",
 	memoryLimits:   "MEMORY LIMITS",
 	memoryUtil:     "MEMORY UTIL",
+	accelRequests:  "ACCEL REQUESTS",
+	accelLimits:    "ACCEL LIMITS",
 	podCount:       "POD COUNT",
 	labels:         "LABELS",
 }
@@ -140,6 +144,15 @@ func (tp *tablePrinter) getLineItems(tl *tableLine) []string {
 		lineItems = append(lineItems, tl.memoryUtil)
 	}
 
+	if tp.opts.ShowAccelerator {
+		if !tp.opts.HideRequests {
+			lineItems = append(lineItems, tl.accelRequests)
+		}
+		if !tp.opts.HideLimits {
+			lineItems = append(lineItems, tl.accelLimits)
+		}
+	}
+
 	if tp.opts.ShowPodCount {
 		lineItems = append(lineItems, tl.podCount)
 	}
@@ -163,6 +176,8 @@ func (tp *tablePrinter) printClusterLine() {
 		memoryRequests: tp.cm.memory.requestString(tp.opts.AvailableFormat),
 		memoryLimits:   tp.cm.memory.limitString(tp.opts.AvailableFormat),
 		memoryUtil:     tp.cm.memory.utilString(tp.opts.AvailableFormat),
+		accelRequests:  tp.cm.accelerator.requestString(tp.opts.AvailableFormat),
+		accelLimits:    tp.cm.accelerator.limitString(tp.opts.AvailableFormat),
 		podCount:       tp.cm.podCount.podCountString(),
 		labels:         VoidValue,
 	})
@@ -180,6 +195,8 @@ func (tp *tablePrinter) printNodeLine(nodeName string, nm *nodeMetric) {
 		memoryRequests: nm.memory.requestString(tp.opts.AvailableFormat),
 		memoryLimits:   nm.memory.limitString(tp.opts.AvailableFormat),
 		memoryUtil:     nm.memory.utilString(tp.opts.AvailableFormat),
+		accelRequests:  nm.accelerator.requestString(tp.opts.AvailableFormat),
+		accelLimits:    nm.accelerator.limitString(tp.opts.AvailableFormat),
 		podCount:       nm.podCount.podCountString(),
 		labels:         nodeLabelsString(nm.labels),
 	})
@@ -197,6 +214,8 @@ func (tp *tablePrinter) printPodLine(nodeName string, pm *podMetric) {
 		memoryRequests: pm.memory.requestString(tp.opts.AvailableFormat),
 		memoryLimits:   pm.memory.limitString(tp.opts.AvailableFormat),
 		memoryUtil:     pm.memory.utilString(tp.opts.AvailableFormat),
+		accelRequests:  pm.accelerator.requestString(tp.opts.AvailableFormat),
+		accelLimits:    pm.accelerator.limitString(tp.opts.AvailableFormat),
 	})
 }
 
@@ -212,5 +231,7 @@ func (tp *tablePrinter) printContainerLine(nodeName string, pm *podMetric, cm *c
 		memoryRequests: cm.memory.requestString(tp.opts.AvailableFormat),
 		memoryLimits:   cm.memory.limitString(tp.opts.AvailableFormat),
 		memoryUtil:     cm.memory.utilString(tp.opts.AvailableFormat),
+		accelRequests:  cm.accelerator.requestString(tp.opts.AvailableFormat),
+		accelLimits:    cm.accelerator.limitString(tp.opts.AvailableFormat),
 	})
 }

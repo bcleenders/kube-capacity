@@ -38,6 +38,10 @@ var SupportedSortAttributes = [...]string{
 	"mem.util.percentage",
 	"mem.request.percentage",
 	"mem.limit.percentage",
+	"accel.request",
+	"accel.limit",
+	"accel.request.percentage",
+	"accel.limit.percentage",
 	"pod.count",
 	"name",
 }
@@ -54,19 +58,22 @@ type resourceMetric struct {
 }
 
 type clusterMetric struct {
-	cpu         *resourceMetric
-	memory      *resourceMetric
-	nodeMetrics map[string]*nodeMetric
-	podCount    *podCount
+	cpu                     *resourceMetric
+	memory                  *resourceMetric
+	accelerator             *resourceMetric
+	acceleratorResourceName corev1.ResourceName
+	nodeMetrics             map[string]*nodeMetric
+	podCount                *podCount
 }
 
 type nodeMetric struct {
-	name       string
-	labels     map[string]string
-	cpu        *resourceMetric
-	memory     *resourceMetric
-	podMetrics map[string]*podMetric
-	podCount   *podCount
+	name        string
+	labels      map[string]string
+	cpu         *resourceMetric
+	memory      *resourceMetric
+	accelerator *resourceMetric
+	podMetrics  map[string]*podMetric
+	podCount    *podCount
 }
 
 type podMetric struct {
@@ -74,13 +81,15 @@ type podMetric struct {
 	namespace        string
 	cpu              *resourceMetric
 	memory           *resourceMetric
+	accelerator      *resourceMetric
 	containerMetrics map[string]*containerMetric
 }
 
 type containerMetric struct {
-	name   string
-	cpu    *resourceMetric
-	memory *resourceMetric
+	name        string
+	cpu         *resourceMetric
+	memory      *resourceMetric
+	accelerator *resourceMetric
 }
 
 type podCount struct {
@@ -89,12 +98,14 @@ type podCount struct {
 }
 
 func buildClusterMetric(podList *corev1.PodList, pmList *v1beta1.PodMetricsList,
-	nodeList *corev1.NodeList, nmList *v1beta1.NodeMetricsList) clusterMetric {
+	nodeList *corev1.NodeList, nmList *v1beta1.NodeMetricsList, acceleratorResourceName corev1.ResourceName) clusterMetric {
 	cm := clusterMetric{
-		cpu:         &resourceMetric{resourceType: "cpu"},
-		memory:      &resourceMetric{resourceType: "memory"},
-		nodeMetrics: map[string]*nodeMetric{},
-		podCount:    &podCount{},
+		cpu:                     &resourceMetric{resourceType: "cpu"},
+		memory:                  &resourceMetric{resourceType: "memory"},
+		accelerator:             &resourceMetric{resourceType: "accelerator"},
+		acceleratorResourceName: acceleratorResourceName,
+		nodeMetrics:             map[string]*nodeMetric{},
+		podCount:                &podCount{},
 	}
 
 	var totalPodAllocatable int64
@@ -118,6 +129,10 @@ func buildClusterMetric(podList *corev1.PodList, pmList *v1beta1.PodMetricsList,
 			memory: &resourceMetric{
 				resourceType: "memory",
 				allocatable:  node.Status.Allocatable["memory"],
+			},
+			accelerator: &resourceMetric{
+				resourceType: "accelerator",
+				allocatable:  node.Status.Allocatable[acceleratorResourceName],
 			},
 			podMetrics: map[string]*podMetric{},
 			podCount: &podCount{
@@ -196,6 +211,11 @@ func (cm *clusterMetric) addPodMetric(pod *corev1.Pod, podMetrics v1beta1.PodMet
 			request:      req["memory"],
 			limit:        limit["memory"],
 		},
+		accelerator: &resourceMetric{
+			resourceType: "accelerator",
+			request:      req[cm.acceleratorResourceName],
+			limit:        limit[cm.acceleratorResourceName],
+		},
 		containerMetrics: map[string]*containerMetric{},
 	}
 
@@ -214,6 +234,12 @@ func (cm *clusterMetric) addPodMetric(pod *corev1.Pod, podMetrics v1beta1.PodMet
 				limit:        container.Resources.Limits["memory"],
 				allocatable:  nm.memory.allocatable,
 			},
+			accelerator: &resourceMetric{
+				resourceType: "accelerator",
+				request:      container.Resources.Requests[cm.acceleratorResourceName],
+				limit:        container.Resources.Limits[cm.acceleratorResourceName],
+				allocatable:  nm.accelerator.allocatable,
+			},
 		}
 	}
 
@@ -221,11 +247,14 @@ func (cm *clusterMetric) addPodMetric(pod *corev1.Pod, podMetrics v1beta1.PodMet
 		nm.podMetrics[key] = pm
 		nm.podMetrics[key].cpu.allocatable = nm.cpu.allocatable
 		nm.podMetrics[key].memory.allocatable = nm.memory.allocatable
+		nm.podMetrics[key].accelerator.allocatable = nm.accelerator.allocatable
 
 		nm.cpu.request.Add(req["cpu"])
 		nm.cpu.limit.Add(limit["cpu"])
 		nm.memory.request.Add(req["memory"])
 		nm.memory.limit.Add(limit["memory"])
+		nm.accelerator.request.Add(req[cm.acceleratorResourceName])
+		nm.accelerator.limit.Add(limit[cm.acceleratorResourceName])
 	}
 
 	for _, container := range podMetrics.Containers {
@@ -242,6 +271,7 @@ func (cm *clusterMetric) addPodMetric(pod *corev1.Pod, podMetrics v1beta1.PodMet
 func (cm *clusterMetric) addNodeMetric(nm *nodeMetric) {
 	cm.cpu.addMetric(nm.cpu)
 	cm.memory.addMetric(nm.memory)
+	cm.accelerator.addMetric(nm.accelerator)
 }
 
 func (cm *clusterMetric) getSortedNodeMetrics(sortBy string) []*nodeMetric {
@@ -282,6 +312,14 @@ func (cm *clusterMetric) getSortedNodeMetrics(sortBy string) []*nodeMetric {
 			return m2.memory.percent(m2.memory.limit) < m1.memory.percent(m1.memory.limit)
 		case "mem.request.percentage":
 			return m2.memory.percent(m2.memory.request) < m1.memory.percent(m1.memory.request)
+		case "accel.limit":
+			return m2.accelerator.limit.Value() < m1.accelerator.limit.Value()
+		case "accel.request":
+			return m2.accelerator.request.Value() < m1.accelerator.request.Value()
+		case "accel.limit.percentage":
+			return m2.accelerator.percent(m2.accelerator.limit) < m1.accelerator.percent(m1.accelerator.limit)
+		case "accel.request.percentage":
+			return m2.accelerator.percent(m2.accelerator.request) < m1.accelerator.percent(m1.accelerator.request)
 		case "pod.count":
 			return m2.podCount.current < m1.podCount.current
 		default:
@@ -330,6 +368,14 @@ func (nm *nodeMetric) getSortedPodMetrics(sortBy string) []*podMetric {
 			return m2.memory.percent(m2.memory.limit) < m1.memory.percent(m1.memory.limit)
 		case "mem.request.percentage":
 			return m2.memory.percent(m2.memory.request) < m1.memory.percent(m1.memory.request)
+		case "accel.limit":
+			return m2.accelerator.limit.Value() < m1.accelerator.limit.Value()
+		case "accel.request":
+			return m2.accelerator.request.Value() < m1.accelerator.request.Value()
+		case "accel.limit.percentage":
+			return m2.accelerator.percent(m2.accelerator.limit) < m1.accelerator.percent(m1.accelerator.limit)
+		case "accel.request.percentage":
+			return m2.accelerator.percent(m2.accelerator.request) < m1.accelerator.percent(m1.accelerator.request)
 		default:
 			return m1.name < m2.name
 		}
@@ -371,6 +417,14 @@ func (pm *podMetric) getSortedContainerMetrics(sortBy string) []*containerMetric
 			return m2.memory.limit.Value() < m1.memory.limit.Value()
 		case "mem.request":
 			return m2.memory.request.Value() < m1.memory.request.Value()
+		case "accel.limit":
+			return m2.accelerator.limit.Value() < m1.accelerator.limit.Value()
+		case "accel.request":
+			return m2.accelerator.request.Value() < m1.accelerator.request.Value()
+		case "accel.limit.percentage":
+			return m2.accelerator.percent(m2.accelerator.limit) < m1.accelerator.percent(m1.accelerator.limit)
+		case "accel.request.percentage":
+			return m2.accelerator.percent(m2.accelerator.request) < m1.accelerator.percent(m1.accelerator.request)
 		default:
 			return m1.name < m2.name
 		}
@@ -464,6 +518,10 @@ func (rm resourceMetric) valueFunction() (f func(r resource.Quantity) string) {
 		f = func(r resource.Quantity) string {
 			return fmt.Sprintf("%dMi", formatToMegiBytes(r))
 		}
+	case "accelerator":
+		f = func(r resource.Quantity) string {
+			return fmt.Sprintf("%d", r.Value())
+		}
 	}
 	return f
 }
@@ -484,10 +542,14 @@ func (rm resourceMetric) percent(r resource.Quantity) int64 {
 // -----------------------------------------
 
 func resourceCSVString(resourceType string, actual resource.Quantity) string {
-	if resourceType == "memory" {
+	switch resourceType {
+	case "memory":
 		return fmt.Sprintf("%d", formatToMegiBytes(actual))
+	case "accelerator":
+		return fmt.Sprintf("%d", actual.Value())
+	default:
+		return fmt.Sprintf("%d", actual.MilliValue())
 	}
-	return fmt.Sprintf("%d", actual.MilliValue())
 }
 
 func resourceCSVPercentageString(actual, divisor resource.Quantity) string {

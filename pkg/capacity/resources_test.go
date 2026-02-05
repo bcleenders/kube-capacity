@@ -28,7 +28,7 @@ import (
 
 func TestBuildClusterMetricEmpty(t *testing.T) {
 	cm := buildClusterMetric(
-		&corev1.PodList{}, &v1beta1.PodMetricsList{}, &corev1.NodeList{}, &v1beta1.NodeMetricsList{},
+		&corev1.PodList{}, &v1beta1.PodMetricsList{}, &corev1.NodeList{}, &v1beta1.NodeMetricsList{}, "",
 	)
 
 	expected := clusterMetric{
@@ -41,6 +41,13 @@ func TestBuildClusterMetricEmpty(t *testing.T) {
 		},
 		memory: &resourceMetric{
 			resourceType: "memory",
+			allocatable:  resource.Quantity{},
+			request:      resource.Quantity{},
+			limit:        resource.Quantity{},
+			utilization:  resource.Quantity{},
+		},
+		accelerator: &resourceMetric{
+			resourceType: "accelerator",
 			allocatable:  resource.Quantity{},
 			request:      resource.Quantity{},
 			limit:        resource.Quantity{},
@@ -146,7 +153,7 @@ func TestBuildClusterMetricFull(t *testing.T) {
 					},
 				},
 			},
-		},
+		}, "",
 	)
 
 	cpuExpected := &resourceMetric{
@@ -249,7 +256,7 @@ func TestSortByPodCount(t *testing.T) {
 		},
 	}
 
-	cm := buildClusterMetric(podList, nil, nodeList, nil)
+	cm := buildClusterMetric(podList, nil, nodeList, nil, "")
 	sortedNodes := cm.getSortedNodeMetrics("pod.count")
 
 	// Node 1 should come first as it has 2 pods vs 1 pod on node 2

@@ -8,6 +8,8 @@ type Options struct {
 	ShowUtil              bool
 	ShowPodCount          bool
 	ShowLabels            bool
+	ShowAccelerator         bool
+	AcceleratorResourceName string
 	HideRequests          bool
 	HideLimits            bool
 	PodLabels             string

@@ -65,6 +65,22 @@ example-node-1    220m (22%)      10m (1%)      10m (1%)    192Mi (6%)         3
 example-node-2    340m (34%)      120m (12%)    30m (3%)    380Mi (13%)        410Mi (14%)     260Mi (9%)
 ```
 
+### Including Accelerators
+When `--accelerator` is passed, output will include requests and limits of an accelerator resource like this:
+
+```
+kube-capacity --accelerator
+
+NODE              CPU REQUESTS    CPU LIMITS    MEMORY REQUESTS    MEMORY LIMITS    ACCEL REQUESTS    ACCEL LIMITS
+*                 560m (28%)      130m (7%)     572Mi (9%)         770Mi (13%)      4 (50%)           4 (50%)
+example-node-1    220m (22%)      10m (1%)      192Mi (6%)         360Mi (12%)      2 (50%)           2 (50%)
+example-node-2    340m (34%)      120m (12%)    380Mi (13%)        410Mi (14%)      2 (50%)           2 (50%)
+```
+
+By default, this tracks `nvidia.com/gpu`. Other accelerator types can be specified with `--accelerator-resource-name`, e.g. `--accelerator-resource-name amd.com/gpu`.
+
+Only requests & limit are supported for accelerators (not utilization).
+
 ### Displaying Available Resources
 To more clearly see the total available resources on the node it is possible to pass the `--available` option
 to kube-capacity, which will give output in the following format
@@ -173,33 +189,32 @@ kube-capacity --pods --containers --util --output tsv
 
 ## Flags Supported
 ```
-      --as string                 user to impersonate command with
-      --as-group string           group to impersonate command with
-  -c, --containers                includes containers in output
-      --context string            context to use for Kubernetes config
-  -h, --help                      help for kube-capacity
-      --kubeconfig string         kubeconfig file to use for Kubernetes config
-  -n, --namespace string          only include pods from this namespace
-      --namespace-labels string   labels to filter namespaces with
-      --hide-limits               hide limits from output
-      --hide-requests             hide requests from output
-      --no-taint                  exclude nodes with taints
-      --node-labels string        labels to filter nodes with
-  -o, --output string             output format for information
-                                    (supports: [table json yaml csv tsv])
-                                    (default "table")
-  -a, --available                 includes quantity available instead of percentage used (ignored with csv or tsv output types)
-  -t, --node-taints               taints to filter nodes with
-  -l, --pod-labels string         labels to filter pods with
-  -p, --pods                      includes pods in output
-      --sort string               attribute to sort results by (supports:
-                                    [cpu.util cpu.request cpu.limit mem.util mem.request mem.limit cpu.util.percentage
-                                    cpu.request.percentage cpu.limit.percentage mem.util.percentage mem.request.percentage
-                                    mem.limit.percentage name])
-                                    (default "name")
-  -u, --util                      includes resource utilization in output
-      --pod-count                 includes pod counts for each of the nodes and the whole cluster
-      --show-labels               includes node labels in output
+      --accelerator                        includes accelerator (e.g., GPU or TPU) requests and limits in output
+      --accelerator-resource-name string   resource name for accelerator metrics (e.g., nvidia.com/gpu, amd.com/gpu, google.com/tpu) (default "nvidia.com/gpu")
+      --as string                          user to impersonate kube-capacity with
+      --as-group string                    group to impersonate kube-capacity with
+  -a, --available                          includes quantity available instead of percentage used
+  -c, --containers                         includes containers in output
+      --context string                     context to use for Kubernetes config
+  -h, --help                               help for kube-capacity
+      --hide-limits                        hide limits from output
+      --hide-requests                      hide requests from output
+      --insecure-skip-tls-verify           If true, the server's certificate will not be checked for validity. This will make your HTTPS connections insecure
+      --kubeconfig string                  kubeconfig file to use for Kubernetes config
+  -n, --namespace string                   only include pods from this namespace
+      --namespace-labels string            labels to filter namespaces with
+      --no-taint                           exclude nodes with taints
+      --node-labels string                 labels to filter nodes with
+  -t, --node-taints string                 comma seperated list of taints to filter nodes with, prefix taint with '!' to filter out
+  -o, --output string                      output format for information (supports: [table csv tsv json yaml]) (default "table")
+      --pod-count                          includes pod count per node in output
+  -l, --pod-labels string                  labels to filter pods with
+  -p, --pods                               includes pods in output
+      --show-labels                        includes node labels in output
+      --sort string                        attribute to sort results by (supports: [cpu.util cpu.request cpu.limit mem.util mem.request mem.limit cpu.util.percentage cpu.request.percentage cpu.limit.percentage mem.util.percentage mem.request.percentage mem.limit.percentage accel.request accel.limit accel.request.percentage accel.limit.percentage pod.count name]) (default "name")
+  -u, --util                               includes resource utilization in output
+
+Use "kube-capacity [command] --help" for more information about a command.
 ```
 
 ## Prerequisites

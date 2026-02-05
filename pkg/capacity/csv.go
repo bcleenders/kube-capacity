@@ -46,6 +46,11 @@ type csvLine struct {
 	memoryLimitsPercentage   string
 	memoryUtil               string
 	memoryUtilPercentage     string
+	accelCapacity            string
+	accelRequests            string
+	accelRequestsPercentage  string
+	accelLimits              string
+	accelLimitsPercentage    string
 	podCountCurrent          string
 	podCountAllocatable      string
 	labels                   string
@@ -70,6 +75,11 @@ var csvHeaderStrings = csvLine{
 	memoryLimitsPercentage:   "MEMORY LIMITS %%",
 	memoryUtil:               "MEMORY UTIL",
 	memoryUtilPercentage:     "MEMORY UTIL %%",
+	accelCapacity:           "ACCEL CAPACITY",
+	accelRequests:           "ACCEL REQUESTS",
+	accelRequestsPercentage: "ACCEL REQUESTS %%",
+	accelLimits:             "ACCEL LIMITS",
+	accelLimitsPercentage:   "ACCEL LIMITS %%",
 	podCountCurrent:          "POD COUNT CURRENT",
 	podCountAllocatable:      "POD COUNT ALLOCATABLE",
 	labels:                   "LABELS",
@@ -160,6 +170,18 @@ func (cp *csvPrinter) getLineItems(cl *csvLine) []string {
 		lineItems = append(lineItems, cl.memoryUtilPercentage)
 	}
 
+	if cp.opts.ShowAccelerator {
+		lineItems = append(lineItems, cl.accelCapacity)
+		if !cp.opts.HideRequests {
+			lineItems = append(lineItems, cl.accelRequests)
+			lineItems = append(lineItems, cl.accelRequestsPercentage)
+		}
+		if !cp.opts.HideLimits {
+			lineItems = append(lineItems, cl.accelLimits)
+			lineItems = append(lineItems, cl.accelLimitsPercentage)
+		}
+	}
+
 	if cp.opts.ShowPodCount {
 		lineItems = append(lineItems, cl.podCountCurrent)
 		lineItems = append(lineItems, cl.podCountAllocatable)
@@ -192,6 +214,11 @@ func (cp *csvPrinter) printClusterLine() {
 		memoryLimitsPercentage:   cp.cm.memory.limitPercentageString(),
 		memoryUtil:               cp.cm.memory.utilActualString(),
 		memoryUtilPercentage:     cp.cm.memory.utilPercentageString(),
+		accelCapacity:           cp.cm.accelerator.capacityString(),
+		accelRequests:           cp.cm.accelerator.requestActualString(),
+		accelRequestsPercentage: cp.cm.accelerator.requestPercentageString(),
+		accelLimits:             cp.cm.accelerator.limitActualString(),
+		accelLimitsPercentage:   cp.cm.accelerator.limitPercentageString(),
 		podCountCurrent:          cp.cm.podCount.podCountCurrentString(),
 		podCountAllocatable:      cp.cm.podCount.podCountAllocatableString(),
 		labels:                   VoidValue,
@@ -218,6 +245,11 @@ func (cp *csvPrinter) printNodeLine(nodeName string, nm *nodeMetric) {
 		memoryLimitsPercentage:   nm.memory.limitPercentageString(),
 		memoryUtil:               nm.memory.utilActualString(),
 		memoryUtilPercentage:     nm.memory.utilPercentageString(),
+		accelCapacity:           nm.accelerator.capacityString(),
+		accelRequests:           nm.accelerator.requestActualString(),
+		accelRequestsPercentage: nm.accelerator.requestPercentageString(),
+		accelLimits:             nm.accelerator.limitActualString(),
+		accelLimitsPercentage:   nm.accelerator.limitPercentageString(),
 		podCountCurrent:          nm.podCount.podCountCurrentString(),
 		podCountAllocatable:      nm.podCount.podCountAllocatableString(),
 		labels:                   fmt.Sprintf("%q", nodeLabelsString(nm.labels)), // quote the labels to avoid CSV parsing issues
@@ -244,6 +276,11 @@ func (cp *csvPrinter) printPodLine(nodeName string, pm *podMetric) {
 		memoryLimitsPercentage:   pm.memory.limitPercentageString(),
 		memoryUtil:               pm.memory.utilActualString(),
 		memoryUtilPercentage:     pm.memory.utilPercentageString(),
+		accelCapacity:           pm.accelerator.capacityString(),
+		accelRequests:           pm.accelerator.requestActualString(),
+		accelRequestsPercentage: pm.accelerator.requestPercentageString(),
+		accelLimits:             pm.accelerator.limitActualString(),
+		accelLimitsPercentage:   pm.accelerator.limitPercentageString(),
 	})
 }
 
@@ -267,5 +304,10 @@ func (cp *csvPrinter) printContainerLine(nodeName string, pm *podMetric, cm *con
 		memoryLimitsPercentage:   cm.memory.limitPercentageString(),
 		memoryUtil:               cm.memory.utilActualString(),
 		memoryUtilPercentage:     cm.memory.utilPercentageString(),
+		accelCapacity:           cm.accelerator.capacityString(),
+		accelRequests:           cm.accelerator.requestActualString(),
+		accelRequestsPercentage: cm.accelerator.requestPercentageString(),
+		accelLimits:             cm.accelerator.limitActualString(),
+		accelLimitsPercentage:   cm.accelerator.limitPercentageString(),
 	})
 }

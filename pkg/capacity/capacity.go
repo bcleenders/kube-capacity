@@ -54,7 +54,7 @@ func FetchAndPrint(opts Options) {
 		}
 	}
 
-	cm := buildClusterMetric(podList, pmList, nodeList, nmList)
+	cm := buildClusterMetric(podList, pmList, nodeList, nmList, corev1.ResourceName(opts.AcceleratorResourceName))
 	printList(&cm, opts)
 }
 

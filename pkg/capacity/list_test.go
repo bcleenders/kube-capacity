@@ -288,6 +288,6 @@ func getTestClusterMetric() clusterMetric {
 					},
 				},
 			},
-		},
+		}, "",
 	)
 }
